@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -15,10 +16,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void MostraMsg (View view) {
-        AlertDialog dialog = new AlertDialog.Builder(this).create();
+        /*AlertDialog dialog = new AlertDialog.Builder(this).create();
         dialog.setTitle("Aviso!");
-        dialog.setMessage("Você Apertou o Botão.");
-        dialog.show();
+        dialog.setMessage("Botão Apertado.");
+        dialog.show();*/
+        Toast.makeText(this, "Botão Pressionado", Toast.LENGTH_LONG).show();
     }
 
     public void IniciaPlot (View view) {
