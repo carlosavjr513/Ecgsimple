@@ -9,30 +9,30 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="ecg.ecgsimple.SecondActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Plot Activity"
-        android:id="@+id/txtPlot"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
-
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="STOP"
-        android:id="@+id/btnStop"
+        android:text="ENCERRAR"
+        android:id="@+id/btnEncerra"
         android:onClick="paraPlot"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_alignParentEnd="false"
-        android:layout_alignParentStart="false" />
+        android:layout_alignParentStart="true"
+        android:layout_alignEnd="@+id/testPlot" />
 
     <com.androidplot.xy.XYPlot
         android:layout_width="wrap_content"
-        android:layout_height="500px"
+        android:layout_height="wrap_content"
         android:id="@+id/testPlot"
-        android:layout_below="@+id/txtPlot"
+        android:layout_below="@+id/editText"
+        android:layout_above="@id/btnEncerra"
+        android:layout_alignParentStart="true" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/editText"
+        android:editable="false"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true" />
 </RelativeLayout>

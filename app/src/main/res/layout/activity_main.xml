@@ -15,35 +15,27 @@
         android:text="Mostra Msg"
         android:id="@+id/btnMsg"
         android:onClick="MostraMsg"
-        android:layout_above="@+id/btnGoSecAct"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="68dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Main Activity"
-        android:id="@+id/txtMainActivity"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="START"
-        android:id="@+id/btnGoSecAct"
+        android:text="INICIAR"
+        android:id="@+id/btnInicia"
+        android:onClick="IniciaPlot"
         android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true"
-        android:onClick="IniciaPlot" />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Sair"
+        android:text="SAIR"
         android:id="@+id/btnSair"
+        android:onClick="sairApp"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="58dp"
-        android:onClick="sairApp" />
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentStart="true" />
 </RelativeLayout>

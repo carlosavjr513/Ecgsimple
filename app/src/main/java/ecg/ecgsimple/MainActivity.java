@@ -16,10 +16,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void MostraMsg (View view) {
-        /*AlertDialog dialog = new AlertDialog.Builder(this).create();
-        dialog.setTitle("Aviso!");
-        dialog.setMessage("Botão Apertado.");
-        dialog.show();*/
         Toast.makeText(this, "Botão Pressionado", Toast.LENGTH_LONG).show();
     }
 
