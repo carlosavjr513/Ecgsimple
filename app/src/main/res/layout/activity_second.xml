@@ -23,16 +23,20 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/testPlot"
-        android:layout_below="@+id/editText"
+        android:layout_below="@+id/textView"
         android:layout_above="@id/btnEncerra"
         android:layout_alignParentStart="true" />
 
-    <EditText
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/editText"
+        android:id="@+id/textView"
         android:editable="false"
         android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignParentEnd="true"
+        android:text="Teste"
+        android:textSize="15sp"
+        android:gravity="center"
+        />
 </RelativeLayout>
