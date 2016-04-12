@@ -17,15 +17,14 @@
         android:onClick="paraPlot"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
-        android:layout_alignEnd="@+id/testPlot" />
+        android:layout_alignEnd="@+id/ecgplot" />
 
     <com.androidplot.xy.XYPlot
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/testPlot"
+        android:id="@+id/ecgplot"
         android:layout_below="@+id/textView"
-        android:layout_above="@id/btnEncerra"
-        android:layout_alignParentStart="true" />
+        android:layout_above="@id/btnEncerra" />
 
     <TextView
         android:layout_width="wrap_content"

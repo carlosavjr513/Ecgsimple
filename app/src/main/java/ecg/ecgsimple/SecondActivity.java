@@ -16,8 +16,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.androidplot.xy.LineAndPointFormatter;
+import com.androidplot.xy.PointLabelFormatter;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
+import com.androidplot.xy.XYSeries;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,8 +43,6 @@ public class SecondActivity extends AppCompatActivity {
     private ProgressDialog progress;
     private boolean estaConectado=false;
 
-
-
     static final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");//SPP depois te explico  melhor
     //eu havia te falado pra gerar um número aleatório, mas no nosso caso não poderemos utilizar
     //esse é um número especial e alguns dispositivos só funcionam com esse UUID SPP (caso do nosso hc-05)
@@ -61,13 +61,17 @@ public class SecondActivity extends AppCompatActivity {
                 sb = new StringBuilder();
                 Connect();
                 }
+
+        XYPlot ecgplot = (XYPlot) findViewById(R.id.ecgplot); // Inicializa a o XYplot
+        Number[] serie_numeros = {1,3,4,2,7,10,6,9,7,3,4,6,8}; // cria Array com valores
+        // Converte array em serie
+        XYSeries serie = new SimpleXYSeries(Arrays.asList(serie_numeros), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Serie");
+        // Formatação da linha
+        LineAndPointFormatter serieFormatada = new LineAndPointFormatter(Color.BLUE, Color.BLACK, null, null);
+        ecgplot.addSeries(serie, serieFormatada); // adciona a serie no XYplot
     }
 
-
-
-
     public void paraPlot (View view) throws IOException {
-      //  closeBT();
         finish();
     }
 
@@ -84,7 +88,7 @@ public class SecondActivity extends AppCompatActivity {
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBluetooth, 0);
         }
-        Log.i("BLUETOOTH","antes pairedDevices");
+        Log.i("BLUETOOTH", "antes pairedDevices");
         Set<BluetoothDevice> pairedDevices = btAdapter.getBondedDevices();
 
         if(pairedDevices.size() > 0)
@@ -103,8 +107,6 @@ public class SecondActivity extends AppCompatActivity {
         //Toast.makeText(this,"Bluetooth Device Found", Toast.LENGTH_SHORT).show();
         return false;
     }
-
-
 
     //Uma AsyncTask é semelhante a uma Thread (te explico melhor na quarta)
     //O Android aconselha a colocar todos os métodos que fazem acesso à rede em uma thread ou AsyncTask
@@ -125,8 +127,6 @@ public class SecondActivity extends AppCompatActivity {
             {
                 if (btSocket == null || !estaConectado)
                 {
-
-
                     btSocket = btDevice.createInsecureRfcommSocketToServiceRecord(myUUID);//create a RFCOMM (SPP) connection
 
                     btSocket.connect();//start connection
@@ -157,17 +157,12 @@ public class SecondActivity extends AppCompatActivity {
         }
     }
 
-
-
-
     void Connect()
     {
         ConnectBT bt = new ConnectBT();
         bt.execute((Void) null);
 
     }
-
-
 
     //código retirado e adaptado do tutorial do Bluetooth no próprio site do Android SDK
     private class ConnectedThread extends Thread {
@@ -188,7 +183,7 @@ public class SecondActivity extends AppCompatActivity {
                 tmpIn = socket.getInputStream();
 
                 tmpOut = socket.getOutputStream();
-                Log.i("MSG","conseguiu pegear stream");
+                Log.i("MSG","conseguiu pegar stream");
             } catch (IOException e) {Log.i("MSG","EXCECAO GETINPUTSTREAM"); }
 
             mmInStream = tmpIn;
@@ -259,15 +254,8 @@ public class SecondActivity extends AppCompatActivity {
                         tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
 
                     }
-
                     break;
                 }
-
-
             }
         }};
-
-
-
-
 }
