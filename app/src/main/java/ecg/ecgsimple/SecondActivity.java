@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.os.AsyncTask;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -15,6 +16,9 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.androidplot.Plot;
+import com.androidplot.util.PixelUtils;
+import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.PointLabelFormatter;
 import com.androidplot.xy.SimpleXYSeries;
@@ -26,8 +30,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Handler;
@@ -50,6 +57,24 @@ public class SecondActivity extends AppCompatActivity {
     final int MESSAGE_READ = 9999;
     StringBuilder sb = null;
 
+    private class MyPlotUpdater implements Observer {
+        Plot plot;
+
+        public MyPlotUpdater(Plot plot) {
+            this.plot = plot;
+            }
+
+            @Override
+            public void update(Observable o, Object arg) {
+                plot.redraw();
+            }
+        }
+
+    private XYPlot ecgPlot;
+    private MyPlotUpdater plotUpdater;
+    SampleDynamicXYDatasource data; // valores do sbprint devem ser jogados aqui via classe SampleDynamicXYDatasource
+    private Thread myThread;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,23 +85,168 @@ public class SecondActivity extends AppCompatActivity {
             if (findBT()) {
                 sb = new StringBuilder();
                 Connect();
+            }
+
+        ecgPlot = (XYPlot) findViewById(R.id.ecgXYplot); // declaração do plot
+        plotUpdater = new MyPlotUpdater(ecgPlot); // declaração do atualizador do plot
+        ecgPlot.getGraphWidget().setDomainValueFormat(new DecimalFormat("0")); // formatação do tipo do valor dos eixos
+
+        data = new SampleDynamicXYDatasource(); // declaraçao da serie
+        SampleDynamicSeries ecgSerie = new SampleDynamicSeries(data, 0, ""); // alimentaçao da serie
+
+        LineAndPointFormatter formatacao = new LineAndPointFormatter(Color.rgb(0,0,255), null, null, null); // Formatação da serie plotada
+        ecgPlot.addSeries(ecgSerie, formatacao); // inserção da serie e sua formatação no Plot
+        data.addObserver(plotUpdater); //Atualização dos dados conforme recebimento
+
+        ecgPlot.setRangeValueFormat(new DecimalFormat("###.#")); // Formato dos valores
+        ecgPlot.setRangeBoundaries(-100, 100, BoundaryMode.FIXED); // Formatação do eixo Y
+
+        // Efeito Visual no Grafico
+        DashPathEffect dashFx = new DashPathEffect(new float[] {PixelUtils.dpToPix(3), PixelUtils.dpToPix(3)}, 0);
+        ecgPlot.getGraphWidget().getDomainGridLinePaint().setPathEffect(dashFx);
+        ecgPlot.getGraphWidget().getRangeGridLinePaint().setPathEffect(dashFx);
+    }
+
+    @Override
+    public void onResume() {
+        // kick off the data generating thread:
+        myThread = new Thread(data);
+        myThread.start();
+        super.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        data.stopThread();
+        super.onPause();
+    }
+
+    // Geração dos valores que a serie recebe, dar um jeito de jogar o sbprint aqui
+    class SampleDynamicXYDatasource implements Runnable {
+
+        // encapsulates management of the observers watching this datasource for update events:
+        class MyObservable extends Observable {
+            @Override
+            public void notifyObservers() {
+                setChanged();
+                super.notifyObservers();
+            }
+        }
+
+        private static final double FREQUENCY = 5; // larger is lower frequency
+        private static final int MAX_AMP_SEED = 100;
+        private static final int MIN_AMP_SEED = 10;
+        private static final int AMP_STEP = 1;
+        public static final int SINE1 = 0;
+        private static final int SAMPLE_SIZE = 30;
+        private int phase = 0;
+        private int sinAmp = 1;
+        private MyObservable notifier;
+        private boolean keepRunning = false;
+
+        {
+            notifier = new MyObservable();
+        }
+
+        public void stopThread() {
+            keepRunning = false;
+        }
+
+        //@Override
+        public void run() {
+            try {
+                keepRunning = true;
+                boolean isRising = true;
+                while (keepRunning) {
+
+                    Thread.sleep(10); // decrease or remove to speed up the refresh rate.
+                    phase++;
+                    if (sinAmp >= MAX_AMP_SEED) {
+                        isRising = false;
+                    } else if (sinAmp <= MIN_AMP_SEED) {
+                        isRising = true;
+                    }
+
+                    if (isRising) {
+                        sinAmp += AMP_STEP;
+                    } else {
+                        sinAmp -= AMP_STEP;
+                    }
+                    notifier.notifyObservers();
                 }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
-        XYPlot ecgplot = (XYPlot) findViewById(R.id.ecgplot); // Inicializa a o XYplot
-        Number[] serie_numeros = {1,3,4,2,7,10,6,9,7,3,4,6,8}; // cria Array com valores
-        // Converte array em serie
-        XYSeries serie = new SimpleXYSeries(Arrays.asList(serie_numeros), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Serie");
-        // Formatação da linha
-        LineAndPointFormatter serieFormatada = new LineAndPointFormatter(Color.BLUE, Color.BLACK, null, null);
-        ecgplot.addSeries(serie, serieFormatada); // adciona a serie no XYplot
+        public int getItemCount(int series) {
+            return SAMPLE_SIZE;
+        }
+
+        public Number getX(int series, int index) {
+            if (index >= SAMPLE_SIZE) {
+                throw new IllegalArgumentException();
+            }
+            return index;
+        }
+
+        public Number getY(int series, int index) {
+            if (index >= SAMPLE_SIZE) {
+                throw new IllegalArgumentException();
+            }
+            double angle = (index + (phase))/FREQUENCY;
+            double amp = sinAmp * Math.sin(angle);
+            switch (series) {
+                case SINE1:
+                    return amp;
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+
+        public void addObserver(Observer observer) {
+            notifier.addObserver(observer);
+        }
+
+        public void removeObserver(Observer observer) {
+            notifier.deleteObserver(observer);
+        }
     }
 
-    public void paraPlot (View view) throws IOException {
-        finish();
+    // Overrides de metodos inerentes a construção de series para o AndroidPlot
+    class SampleDynamicSeries implements XYSeries {
+        private SampleDynamicXYDatasource datasource;
+        private int seriesIndex;
+        private String title;
+
+        public SampleDynamicSeries(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
+            this.datasource = datasource;
+            this.seriesIndex = seriesIndex;
+            this.title = title;
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public int size() {
+            return datasource.getItemCount(seriesIndex);
+        }
+
+        @Override
+        public Number getX(int index) {
+            return datasource.getX(seriesIndex, index);
+        }
+
+        @Override
+        public Number getY(int index) {
+            return datasource.getY(seriesIndex, index);
+        }
     }
 
-    boolean findBT()
-    {
+    boolean findBT() {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         if(btAdapter == null)
         {
@@ -100,7 +270,6 @@ public class SecondActivity extends AppCompatActivity {
                     Log.i("BLUETOOTH",device.getName());
                     btDevice = device;
                     return true;
-
                 }
             }
         }
@@ -143,15 +312,14 @@ public class SecondActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void result) //after the doInBackground, it checks if everything went fine
         {
-            super.onPostExecute(result);
-
+           super.onPostExecute(result);
            if (conectou) {
                 Log.i("BLUETOOTH","Connected.");
               //  isBtConnected = true;
                 btAdapter.cancelDiscovery();
                th = new ConnectedThread(btSocket,mHandler);
                th.start();
-
+               estaConectado=true;
             }
             progress.dismiss();
         }
@@ -161,7 +329,6 @@ public class SecondActivity extends AppCompatActivity {
     {
         ConnectBT bt = new ConnectBT();
         bt.execute((Void) null);
-
     }
 
     //código retirado e adaptado do tutorial do Bluetooth no próprio site do Android SDK
@@ -204,7 +371,7 @@ public class SecondActivity extends AppCompatActivity {
 
                         bytes = mmInStream.read(buffer);
 
-                            //envia a mensagem através do Handler
+                        //envia a mensagem através do Handler
                         if (bytes > 0)
                             mhandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget();
                     }
@@ -239,23 +406,21 @@ public class SecondActivity extends AppCompatActivity {
                     byte[] data = (byte[]) msg.obj;
                     String str = new String(data,0,msg.arg1);
                     sb.append(str);
-
                     //String str = msg.toString();
                     int endOfLineIndex = sb.indexOf("\r\n");
                     if (endOfLineIndex > 0) {
                         String sbprint = sb.substring(0, endOfLineIndex);
                         sb.delete(0, sb.length());
-
                         /*
                         A variável sbprint nesse momento possui o valor recebido pela porta serial através do Bluetooth
                         Deve-se utilizar os valores recebidos aqui e plotá-los em um gráfico
                          */
                        // Log.i("BLUETOOTH",sbprint);
                         tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
-
                     }
                     break;
                 }
             }
-        }};
+        }
+    };
 }
