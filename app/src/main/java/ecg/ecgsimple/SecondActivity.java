@@ -21,7 +21,6 @@ import com.androidplot.util.PixelUtils;
 import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.PointLabelFormatter;
-import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
 
@@ -31,6 +30,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Observable;
@@ -46,7 +46,7 @@ public class SecondActivity extends AppCompatActivity {
     BluetoothAdapter btAdapter=null;
     BluetoothSocket btSocket=null;
     BluetoothDevice btDevice=null;
-    private ConnectedThread th = null;
+    private SampleDynamicXYDatasource th = null;
     private ProgressDialog progress;
     private boolean estaConectado=false;
 
@@ -75,6 +75,9 @@ public class SecondActivity extends AppCompatActivity {
     SampleDynamicXYDatasource data; // valores do sbprint devem ser jogados aqui via classe SampleDynamicXYDatasource
     private Thread myThread;
 
+    private byte[] mByte;
+    dou
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,8 +101,8 @@ public class SecondActivity extends AppCompatActivity {
         ecgPlot.addSeries(ecgSerie, formatacao); // inserção da serie e sua formatação no Plot
         data.addObserver(plotUpdater); //Atualização dos dados conforme recebimento
 
-        ecgPlot.setRangeValueFormat(new DecimalFormat("###.#")); // Formato dos valores
-        ecgPlot.setRangeBoundaries(-100, 100, BoundaryMode.FIXED); // Formatação do eixo Y
+        ecgPlot.setRangeValueFormat(new DecimalFormat("##.#")); // Formato dos valores
+        ecgPlot.setRangeBoundaries(20, 40, BoundaryMode.FIXED); // Formatação do eixo Y
 
         // Efeito Visual no Grafico
         DashPathEffect dashFx = new DashPathEffect(new float[] {PixelUtils.dpToPix(3), PixelUtils.dpToPix(3)}, 0);
@@ -133,14 +136,11 @@ public class SecondActivity extends AppCompatActivity {
             }
         }
 
-        private static final double FREQUENCY = 5; // larger is lower frequency
-        private static final int MAX_AMP_SEED = 100;
-        private static final int MIN_AMP_SEED = 10;
-        private static final int AMP_STEP = 1;
-        public static final int SINE1 = 0;
+        private final BluetoothSocket mmSocket;
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
+        private final android.os.Handler mhandler;
         private static final int SAMPLE_SIZE = 30;
-        private int phase = 0;
-        private int sinAmp = 1;
         private MyObservable notifier;
         private boolean keepRunning = false;
 
@@ -152,27 +152,47 @@ public class SecondActivity extends AppCompatActivity {
             keepRunning = false;
         }
 
+        public SampleDynamicXYDatasource(BluetoothSocket socket, android.os.Handler mHandler) {
+            mmSocket = socket;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+            this.mhandler = mHandler;
+
+            // Get the input and output streams, using temp objects because
+            // member streams are final
+            try {
+                tmpIn = socket.getInputStream();
+
+                tmpOut = socket.getOutputStream();
+                Log.i("MSG","conseguiu pegar stream");
+            } catch (IOException e) {Log.i("MSG","EXCECAO GETINPUTSTREAM"); }
+
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+        }
+
         //@Override
         public void run() {
             try {
-                keepRunning = true;
-                boolean isRising = true;
-                while (keepRunning) {
+                int bytes; // bytes returned from read()
+                int available=0;
+                // Keep listening to the InputStream until an exception occurs
+                while (true) {
+                    try {
+                        // Read from the InputStream
+                        available = mmInStream.available();
+                        if (available>0) {
+                            byte[] buffer = new byte[available];  // buffer store for the stream
 
-                    Thread.sleep(10); // decrease or remove to speed up the refresh rate.
-                    phase++;
-                    if (sinAmp >= MAX_AMP_SEED) {
-                        isRising = false;
-                    } else if (sinAmp <= MIN_AMP_SEED) {
-                        isRising = true;
-                    }
+                            bytes = mmInStream.read(buffer);
 
-                    if (isRising) {
-                        sinAmp += AMP_STEP;
-                    } else {
-                        sinAmp -= AMP_STEP;
+                            //envia a mensagem através do Handler
+                            if (bytes > 0)
+                            // mhandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget();
+                        }
+                    } catch (IOException e) {
+                        break;
                     }
-                    notifier.notifyObservers();
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -194,15 +214,18 @@ public class SecondActivity extends AppCompatActivity {
             if (index >= SAMPLE_SIZE) {
                 throw new IllegalArgumentException();
             }
-            double angle = (index + (phase))/FREQUENCY;
-            double amp = sinAmp * Math.sin(angle);
-            switch (series) {
-                case SINE1:
-                    return amp;
-                default:
-                    throw new IllegalArgumentException();
-            }
+
+            byte[] data = (byte[]) mByte;
+            String str = ((byte[]) mByte).toString();//new String(data,0,msg.arg1);
+            sb.append(str);
+            int endOfLineIndex = sb.indexOf("\r\n");
+            if (endOfLineIndex > 0) {
+                String sbprint = sb.substring(0, endOfLineIndex);
+                sb.delete(0, sb.length());
+                aux = Double.parseDouble(sbprint);
         }
+
+        return aux;
 
         public void addObserver(Observer observer) {
             notifier.addObserver(observer);
@@ -317,7 +340,7 @@ public class SecondActivity extends AppCompatActivity {
                 Log.i("BLUETOOTH","Connected.");
               //  isBtConnected = true;
                 btAdapter.cancelDiscovery();
-               th = new ConnectedThread(btSocket,mHandler);
+               th = new SampleDynamicXYDatasource(btSocket,mHandler);
                th.start();
                estaConectado=true;
             }
@@ -331,78 +354,12 @@ public class SecondActivity extends AppCompatActivity {
         bt.execute((Void) null);
     }
 
-    //código retirado e adaptado do tutorial do Bluetooth no próprio site do Android SDK
-    private class ConnectedThread extends Thread {
-        private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
-        private final android.os.Handler mhandler;
-
-        public ConnectedThread(BluetoothSocket socket, android.os.Handler mHandler) {
-            mmSocket = socket;
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
-            this.mhandler = mHandler;
-
-            // Get the input and output streams, using temp objects because
-            // member streams are final
-            try {
-                tmpIn = socket.getInputStream();
-
-                tmpOut = socket.getOutputStream();
-                Log.i("MSG","conseguiu pegar stream");
-            } catch (IOException e) {Log.i("MSG","EXCECAO GETINPUTSTREAM"); }
-
-            mmInStream = tmpIn;
-            mmOutStream = tmpOut;
-        }
-
-        public void run() {
-
-            int bytes; // bytes returned from read()
-            int available=0;
-            // Keep listening to the InputStream until an exception occurs
-            while (true) {
-                try {
-                    // Read from the InputStream
-                    available = mmInStream.available();
-                    if (available>0) {
-                        byte[] buffer = new byte[available];  // buffer store for the stream
-
-                        bytes = mmInStream.read(buffer);
-
-                        //envia a mensagem através do Handler
-                        if (bytes > 0)
-                            mhandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget();
-                    }
-                } catch (IOException e) {
-
-                    break;
-                }
-            }
-        }
-
-        /* Call this from the main activity to send data to the remote device */
-        public void write(byte[] bytes) {
-            try {
-                mmOutStream.write(bytes);
-            } catch (IOException e) { }
-        }
-
-        /* Call this from the main activity to shutdown the connection */
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) { }
-        }
-    }
-
-    private final android.os.Handler mHandler = new android.os.Handler() {
+   private final android.os.Handler mHandler = new android.os.Handler() {
 
         @Override
         public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case MESSAGE_READ: {
+            //switch (msg.what) {
+                //case MESSAGE_READ: {
                     byte[] data = (byte[]) msg.obj;
                     String str = new String(data,0,msg.arg1);
                     sb.append(str);
@@ -418,9 +375,9 @@ public class SecondActivity extends AppCompatActivity {
                        // Log.i("BLUETOOTH",sbprint);
                         tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
                     }
-                    break;
-                }
-            }
+                    //break;
+               // }
+            //}
         }
     };
 }
