@@ -43,7 +43,6 @@ public class SecondActivity extends AppCompatActivity {
     private ProgressDialog progress;
     private boolean estaConectado = false;
 
-
     static final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");//SPP depois te explico  melhor
     //eu havia te falado pra gerar um número aleatório, mas no nosso caso não poderemos utilizar
     //esse é um número especial e alguns dispositivos só funcionam com esse UUID SPP (caso do nosso hc-05)
@@ -51,9 +50,9 @@ public class SecondActivity extends AppCompatActivity {
     final int MESSAGE_READ = 9999;
     StringBuilder sb = null;
 
-    private static final int HISTORY_SIZE = 30; // Tamanho da Amostra
+    private static final int HISTORY_SIZE = 60; // Tamanho da Amostra
     private XYPlot ecgplot = null; // Declara o plot Vazio
-    private XYSeries ecgserie = null; // Declara a Serie Vazia
+    private SimpleXYSeries ecgserie = null; // Declara a Serie Vazia
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,14 +63,32 @@ public class SecondActivity extends AppCompatActivity {
 
         if (findBT()) {
             sb = new StringBuilder();
+            Log.i("CONNECT","ANTES");
             Connect();
+            Log.i("CONNECT","DEPOIS");
         }
-
+        tv.setText("");
         ecgplot = (XYPlot) findViewById(R.id.ecgplot);
         ecgserie = new SimpleXYSeries("ecgserie"); // Nome da Serie
         ecgplot.addSeries(ecgserie, new LineAndPointFormatter(Color.rgb(0, 0, 255), null, null, null)); // Formatação da Linha
-        ecgplot.setRangeBoundaries(15, 40, BoundaryMode.FIXED); // Define os valores fixos do Eixo Y
+        ecgplot.setRangeBoundaries(0, 1024, BoundaryMode.FIXED); // Define os valores fixos do Eixo Y
+        ecgserie.useImplicitXVals();
+        ecgplot.setDomainBoundaries(0, HISTORY_SIZE, BoundaryMode.FIXED);
     }
+
+    /*@Override
+    protected void onResume() {
+        super.onResume();
+        setContentView(R.layout.activity_second);
+        Connect();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        setContentView(R.layout.activity_second);
+        th.cancel();
+    }*/
 
     boolean findBT() {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -92,7 +109,6 @@ public class SecondActivity extends AppCompatActivity {
                     Log.i("BLUETOOTH", device.getName());
                     btDevice = device;
                     return true;
-
                 }
             }
         }
@@ -116,13 +132,13 @@ public class SecondActivity extends AppCompatActivity {
             try {
                 if (btSocket == null || !estaConectado) {
 
-
                     btSocket = btDevice.createInsecureRfcommSocketToServiceRecord(myUUID);//create a RFCOMM (SPP) connection
 
                     btSocket.connect();//start connection
                     estaConectado = true;
                 }
             } catch (IOException e) {
+                Log.i("CONNECT","ERRO CONEXAO");
                 conectou = false;//if the try failed, you can check the exception here
                 estaConectado = false;
             }
@@ -149,7 +165,6 @@ public class SecondActivity extends AppCompatActivity {
     void Connect() {
         ConnectBT bt = new ConnectBT();
         bt.execute((Void) null);
-
     }
 
     //código retirado e adaptado do tutorial do Bluetooth no próprio site do Android SDK
@@ -171,9 +186,9 @@ public class SecondActivity extends AppCompatActivity {
                 tmpIn = socket.getInputStream();
 
                 tmpOut = socket.getOutputStream();
-                Log.i("MSG", "conseguiu pegear stream");
+                //Log.i("MSG", "conseguiu pegear stream");
             } catch (IOException e) {
-                Log.i("MSG", "EXCECAO GETINPUTSTREAM");
+                //Log.i("MSG", "EXCECAO GETINPUTSTREAM");
             }
 
             mmInStream = tmpIn;
@@ -193,7 +208,7 @@ public class SecondActivity extends AppCompatActivity {
                         byte[] buffer = new byte[available];  // buffer store for the stream
 
                         bytes = mmInStream.read(buffer);
-
+                        Log.i("BYTES","ENTROU");
                         //envia a mensagem através do Handler
                         if (bytes > 0)
                             mhandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget();
@@ -231,7 +246,7 @@ public class SecondActivity extends AppCompatActivity {
                     byte[] data = (byte[]) msg.obj;
                     String str = new String(data, 0, msg.arg1);
                     sb.append(str);
-
+//                    Log.i("VALOR2","ENTROU");
                     //String str = msg.toString();
                     int endOfLineIndex = sb.indexOf("\r\n");
                     if (endOfLineIndex > 0) {
@@ -242,19 +257,14 @@ public class SecondActivity extends AppCompatActivity {
                         Deve-se utilizar os valores recebidos aqui e plotá-los em um gráfico
                          */
                         // Log.i("BLUETOOTH",sbprint);
-                        tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
-
-                        //Double[] serie = Double.parseDouble(sbprint); // Double[] != Double (passar via FOR?)
-                                                                        // E parse não consegue converter o sbprint
-                        //ecgserie.setModel(Arrays.asList(serie), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY); // não reconhece 'setModel'
-
-                        /*if(ecgserie.size() > HISTORY_SIZE)
+                        //tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
+                        if(ecgserie.size() > HISTORY_SIZE)
                         {
                             ecgserie.removeFirst(); // Nao reconhece 'removeFirst'
                         }
-
+  //                      Log.i("VALOR",sbprint);
                         ecgserie.addLast(null, Float.parseFloat(sbprint)); // Não reconhece 'addLast'
-                        ecgplot.redraw();*/
+                        ecgplot.redraw();
                     }
                     break;
                 }

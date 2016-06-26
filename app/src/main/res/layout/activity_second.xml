@@ -26,5 +26,5 @@
         android:textSize="15sp"
         android:gravity="center"
         android:textIsSelectable="false"
-        android:hint="Teste" />
+        android:hint="" />
 </RelativeLayout>
