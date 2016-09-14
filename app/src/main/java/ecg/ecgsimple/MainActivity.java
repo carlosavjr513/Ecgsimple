@@ -15,10 +15,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
     }
 
-    public void MostraMsg (View view) {
-        Toast.makeText(this, "Botão Pressionado", Toast.LENGTH_LONG).show();
-    }
-
     public void IniciaPlot (View view) {
         Intent it = new Intent(this, SecondActivity.class);
         startActivity(it);

@@ -19,19 +19,12 @@ import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
-import com.androidplot.xy.XYSeries;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
 
 public class SecondActivity extends AppCompatActivity {
 
@@ -42,6 +35,7 @@ public class SecondActivity extends AppCompatActivity {
     private ConnectedThread th = null;
     private ProgressDialog progress;
     private boolean estaConectado = false;
+    public long plotar = 1;
 
     static final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");//SPP depois te explico  melhor
     //eu havia te falado pra gerar um número aleatório, mas no nosso caso não poderemos utilizar
@@ -58,8 +52,12 @@ public class SecondActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_second);
+    }
 
-        tv = (TextView) findViewById(R.id.textView);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setContentView(R.layout.activity_second);
 
         if (findBT()) {
             sb = new StringBuilder();
@@ -67,28 +65,39 @@ public class SecondActivity extends AppCompatActivity {
             Connect();
             Log.i("CONNECT","DEPOIS");
         }
-        tv.setText("");
+
         ecgplot = (XYPlot) findViewById(R.id.ecgplot);
         ecgserie = new SimpleXYSeries("ecgserie"); // Nome da Serie
         ecgplot.addSeries(ecgserie, new LineAndPointFormatter(Color.rgb(0, 0, 255), null, null, null)); // Formatação da Linha
-        ecgplot.setRangeBoundaries(0, 1024, BoundaryMode.FIXED); // Define os valores fixos do Eixo Y
+        ecgplot.setRangeBoundaries(0, 100, BoundaryMode.FIXED); // Define os valores fixos do Eixo Y
         ecgserie.useImplicitXVals();
         ecgplot.setDomainBoundaries(0, HISTORY_SIZE, BoundaryMode.FIXED);
     }
 
-    /*@Override
-    protected void onResume() {
-        super.onResume();
-        setContentView(R.layout.activity_second);
-        Connect();
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (th.mhandler != null) {
+            th.cancel();
+        }
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        setContentView(R.layout.activity_second);
-        th.cancel();
-    }*/
+    public void play (View view) {
+        try {
+            Intent it = new Intent(this, SecondActivity.class);
+            finish();
+            startActivity(it);
+        } catch (Exception e){
+            Log.i("ERRO!", "NO PLAY");
+        }
+    }
+    public void pause (View view) {
+        try {
+            th.mmInStream.close();
+        } catch (Exception e){
+            Log.i("ERRO!", "NO PAUSE");
+        }
+    }
 
     boolean findBT() {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -197,7 +206,7 @@ public class SecondActivity extends AppCompatActivity {
 
         public void run() {
 
-            int bytes; // bytes returned from read()
+            // bytes returned from read()
             int available = 0;
             // Keep listening to the InputStream until an exception occurs
             while (true) {
@@ -206,12 +215,31 @@ public class SecondActivity extends AppCompatActivity {
                     available = mmInStream.available();
                     if (available > 0) {
                         byte[] buffer = new byte[available];  // buffer store for the stream
+                        int bytes = mmInStream.read(buffer);
 
-                        bytes = mmInStream.read(buffer);
-                        Log.i("BYTES","ENTROU");
-                        //envia a mensagem através do Handler
-                        if (bytes > 0)
-                            mhandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget();
+                        String str = new String(buffer);
+                        sb.append(str);
+
+                        int endOfLineIndex = sb.indexOf("~");
+                        if (endOfLineIndex==0)
+                            sb.delete(0,1);
+
+                        while ((endOfLineIndex=sb.indexOf("~")) > 0) {
+                            String sbprint = sb.substring(0, endOfLineIndex);
+                            sb.delete(0,endOfLineIndex);
+                        /*
+                        A variável sbprint nesse momento possui o valor recebido pela porta serial através do Bluetooth
+                        Deve-se utilizar os valores recebidos aqui e plotá-los em um gráfico
+                         */
+                            // Log.i("BLUETOOTH",sbprint);
+                            //tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
+
+
+                            Log.i("BYTES", "ENTROU");
+                            //envia a mensagem através do Handler
+                            if (bytes > 0)
+                                mhandler.obtainMessage(MESSAGE_READ, sbprint.length(), -1, sbprint).sendToTarget();
+                        }
                     }
                 } catch (IOException e) {
 
@@ -243,33 +271,33 @@ public class SecondActivity extends AppCompatActivity {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case MESSAGE_READ: {
-                    byte[] data = (byte[]) msg.obj;
-                    String str = new String(data, 0, msg.arg1);
-                    sb.append(str);
-//                    Log.i("VALOR2","ENTROU");
+                    //byte[] data = (byte[]) msg.obj;
+                    //String str = new String(data, 0, msg.arg1);
+                    String str = (String) msg.obj;
+                    //String str = new String (data);
+                    //Log.i("NOVO",str);
+                    //sb.append(str);
+                    //Log.i("VALOR2","ENTROU");
                     //String str = msg.toString();
-                    int endOfLineIndex = sb.indexOf("\r\n");
-                    if (endOfLineIndex > 0) {
-                        String sbprint = sb.substring(0, endOfLineIndex);
-                        sb.delete(0, sb.length());
-                        /*
-                        A variável sbprint nesse momento possui o valor recebido pela porta serial através do Bluetooth
-                        Deve-se utilizar os valores recebidos aqui e plotá-los em um gráfico
-                         */
-                        // Log.i("BLUETOOTH",sbprint);
-                        //tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
-                        if(ecgserie.size() > HISTORY_SIZE)
-                        {
-                            ecgserie.removeFirst(); // Nao reconhece 'removeFirst'
+
+                    /*if (plotar = false) {
+                        Log.i("recebeu pause", "plotar = false");
+                        ecgplot.willNotDraw();
+                        //ecgplot.wait(?);
+                    } else {
+                        Log.i("recebeu play", "plotar = true");*/
+                        if (ecgserie.size() > HISTORY_SIZE) {
+                            ecgserie.removeFirst();
                         }
-  //                      Log.i("VALOR",sbprint);
-                        ecgserie.addLast(null, Float.parseFloat(sbprint)); // Não reconhece 'addLast'
+                        //Log.i("VALOR",sbprint);
+                        ecgserie.addLast(null, Float.parseFloat(str));
                         ecgplot.redraw();
-                    }
+                    //}
                     break;
                 }
             }
         }
     };
+
 }
 

@@ -13,18 +13,25 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/ecgplot"
-        android:layout_below="@+id/textView" />
+        android:layout_below="@+id/btnPlay" />
 
-    <TextView
-        android:layout_width="wrap_content"
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="200px"
         android:layout_height="wrap_content"
-        android:id="@+id/textView"
-        android:editable="false"
-        android:layout_alignParentTop="true"
+        android:text="Play"
+        android:id="@+id/btnPlay"
         android:layout_alignParentStart="true"
+        android:onClick="play" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="200px"
+        android:layout_height="wrap_content"
+        android:text="Pause"
+        android:id="@+id/btnPause"
+        android:layout_above="@+id/ecgplot"
         android:layout_alignParentEnd="true"
-        android:textSize="15sp"
-        android:gravity="center"
-        android:textIsSelectable="false"
-        android:hint="" />
+        android:onClick="pause" />
+
 </RelativeLayout>
