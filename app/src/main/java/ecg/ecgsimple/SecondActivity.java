@@ -12,6 +12,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,6 +37,8 @@ public class SecondActivity extends AppCompatActivity {
     private ProgressDialog progress;
     private boolean estaConectado = false;
     public long plotar = 1;
+    private Button stop=null;
+    private Button play = null;
 
     static final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");//SPP depois te explico  melhor
     //eu havia te falado pra gerar um número aleatório, mas no nosso caso não poderemos utilizar
@@ -52,13 +55,13 @@ public class SecondActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_second);
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        setContentView(R.layout.activity_second);
 
+        stop = (Button) findViewById(R.id.btnPause);
+        play = (Button) findViewById(R.id.btnPlay);
+
+        /*
+        Log.i("ONRESUME","ENTROU");
         if (findBT()) {
             sb = new StringBuilder();
             Log.i("CONNECT","ANTES");
@@ -66,38 +69,115 @@ public class SecondActivity extends AppCompatActivity {
             Log.i("CONNECT","DEPOIS");
         }
 
+*/
         ecgplot = (XYPlot) findViewById(R.id.ecgplot);
         ecgserie = new SimpleXYSeries("ecgserie"); // Nome da Serie
         ecgplot.addSeries(ecgserie, new LineAndPointFormatter(Color.rgb(0, 0, 255), null, null, null)); // Formatação da Linha
-        ecgplot.setRangeBoundaries(0, 100, BoundaryMode.FIXED); // Define os valores fixos do Eixo Y
+        ecgplot.setRangeBoundaries(0, 1023, BoundaryMode.FIXED); // Define os valores fixos do Eixo Y
         ecgserie.useImplicitXVals();
         ecgplot.setDomainBoundaries(0, HISTORY_SIZE, BoundaryMode.FIXED);
+
+
+        stop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (estaConectado) {
+                    try {
+                        th.mmInStream.close();
+                         btSocket.close();
+                        //th.cancel();
+                        th.interrupt();
+                        th = null;
+                        btAdapter = null;
+                        estaConectado = false;
+
+                    } catch (Exception e) {
+                        Log.i("ERRO!", "NO PAUSE");
+                    }
+
+                }
+
+            }
+        });
+
+
+        play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!estaConectado) {
+
+
+
+                    try {
+                        if (findBT()) {
+                            sb = new StringBuilder();
+                            Log.i("CONNECT", "ANTES");
+                            Connect();
+                            Log.i("CONNECT", "DEPOIS");
+                        }
+
+                    } catch (Exception e) {
+                        Log.i("ERRO!", "NO PLAY");
+                    }
+
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+     //   setContentView(R.layout.activity_second);
+
+        if (!estaConectado) {
+
+
+
+            try {
+                if (findBT()) {
+                    sb = new StringBuilder();
+                    Log.i("CONNECT", "ANTES");
+                    Connect();
+                    Log.i("CONNECT", "DEPOIS");
+                }
+
+            } catch (Exception e) {
+                Log.i("ERRO!", "NO PLAY");
+            }
+
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if (th.mhandler != null) {
-            th.cancel();
+
+        if (estaConectado) {
+            try {
+                th.mmInStream.close();
+                btSocket.close();
+                //th.cancel();
+                th.interrupt();
+                th = null;
+                btAdapter = null;
+                estaConectado = false;
+
+            } catch (Exception e) {
+                Log.i("ERRO!", "NO PAUSE");
+            }
+
         }
+
+
+        // if (th.mhandler != null) {
+        //th.cancel();
+       // }
+
+       // btAdapter.disable();
     }
 
-    public void play (View view) {
-        try {
-            Intent it = new Intent(this, SecondActivity.class);
-            finish();
-            startActivity(it);
-        } catch (Exception e){
-            Log.i("ERRO!", "NO PLAY");
-        }
-    }
-    public void pause (View view) {
-        try {
-            th.mmInStream.close();
-        } catch (Exception e){
-            Log.i("ERRO!", "NO PAUSE");
-        }
-    }
+
 
     boolean findBT() {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -179,7 +259,7 @@ public class SecondActivity extends AppCompatActivity {
     //código retirado e adaptado do tutorial do Bluetooth no próprio site do Android SDK
     private class ConnectedThread extends Thread {
         private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
+        public final InputStream mmInStream;
         private final OutputStream mmOutStream;
         private final android.os.Handler mhandler;
 
@@ -234,8 +314,9 @@ public class SecondActivity extends AppCompatActivity {
                             // Log.i("BLUETOOTH",sbprint);
                             //tv.setText(sbprint); //Lugar onde o valor recebido pelo Bluetooth é apresentado no TextView
 
+                            //Log.i("SBPRINT",sbprint);
 
-                            Log.i("BYTES", "ENTROU");
+                           // Log.i("BYTES", "ENTROU");
                             //envia a mensagem através do Handler
                             if (bytes > 0)
                                 mhandler.obtainMessage(MESSAGE_READ, sbprint.length(), -1, sbprint).sendToTarget();
